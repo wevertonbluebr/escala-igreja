@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Escala Semana Santa</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #eef2f7;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    }
+
+    .title {
+      font-weight: bold;
+      margin-bottom: 12px;
+      font-size: 17px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 5px;
+    }
+
+    .label {
+      width: 90px;
+      font-weight: bold;
+    }
+
+    input {
+      flex: 1;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    button {
+      padding: 7px 10px;
+      border: none;
+      border-radius: 8px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background: gray;
+      cursor: not-allowed;
+    }
+
+    .filled {
+      background: #e6f7ec;
+      border: 1px solid #28a745;
+      color: #155724;
+      font-weight: bold;
+    }
+
+    .error {
+      border: 2px solid red;
+    }
+
+    .clear-btn {
+      background: #dc3545;
+      margin-top: 10px;
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>Escala Semana Santa</h1>
+
+<div id="app"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase, ref, set, get, child, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBvPgTXFRzZPv7KGtx-vm2QOTAarsIq6sg",
+    authDomain: "escala-igreja-e3547.firebaseapp.com",
+    databaseURL: "https://escala-igreja-e3547-default-rtdb.firebaseio.com",
+    projectId: "escala-igreja-e3547",
+    storageBucket: "escala-igreja-e3547.firebasestorage.app",
+    messagingSenderId: "368128837702",
+    appId: "1:368128837702:web:640135a04904ccf408a247"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const isAdmin = window.location.search.includes("admin=1");
+
+  const escala = [
+    { data: "30/03", dia: "Segunda", hora: "19:30" },
+    { data: "31/03", dia: "Terça", hora: "19:30" },
+    { data: "01/04", dia: "Quarta", hora: "19:30" },
+    { data: "02/04", dia: "Quinta", hora: "19:30" },
+    { data: "03/04", dia: "Sexta", hora: "20:00" }
+  ];
+
+  const funcoes = ["PA", "PC", "Corte", "Câmera 1", "Câmera 2", "Câmera 3"];
+
+  const appDiv = document.getElementById("app");
+
+  async function nomeJaExiste(nome) {
+    const snapshot = await get(ref(db));
+    if (!snapshot.exists()) return false;
+
+    const dados = snapshot.val();
+    return Object.values(dados).some(v => v.toLowerCase() === nome.toLowerCase());
+  }
+
+  function criarCard(diaObj) {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const title = document.createElement("div");
+    title.className = "title";
+    title.innerText = `${diaObj.dia} - ${diaObj.data} - ${diaObj.hora}`;
+    card.appendChild(title);
+
+    funcoes.forEach(func => {
+      const row = document.createElement("div");
+      row.className = "row";
+
+      const label = document.createElement("span");
+      label.className = "label";
+      label.innerText = func;
+
+      const input = document.createElement("input");
+      input.placeholder = "Disponível";
+
+      const btn = document.createElement("button");
+      btn.innerText = "Salvar";
+
+      btn.onclick = async () => {
+        const nome = input.value.trim();
+        if (!nome) return;
+
+        const duplicado = await nomeJaExiste(nome);
+        if (duplicado) {
+          input.classList.add("error");
+          alert("Esse nome já foi usado em outra função!");
+          return;
+        }
+
+        const caminho = `${diaObj.data}_${func}`;
+        await set(ref(db, caminho), nome);
+
+        input.disabled = true;
+        btn.disabled = true;
+        input.classList.add("filled");
+        input.classList.remove("error");
+      };
+
+      row.appendChild(label);
+      row.appendChild(input);
+      row.appendChild(btn);
+
+      card.appendChild(row);
+
+      const caminho = `${diaObj.data}_${func}`;
+      get(child(ref(db), caminho)).then(snapshot => {
+        if (snapshot.exists()) {
+          input.value = snapshot.val();
+          input.disabled = true;
+          btn.disabled = true;
+          input.classList.add("filled");
+        }
+      });
+    });
+
+    // BOTÃO ADMIN (SÓ APARECE SE ?admin=1)
+    if (isAdmin) {
+      const clearBtn = document.createElement("button");
+      clearBtn.innerText = "Limpar este dia (admin)";
+      clearBtn.className = "clear-btn";
+
+      clearBtn.onclick = async () => {
+        if (!confirm("Tem certeza que deseja limpar este dia?")) return;
+
+        for (let func of funcoes) {
+          const caminho = `${diaObj.data}_${func}`;
+          await remove(ref(db, caminho));
+        }
+
+        location.reload();
+      };
+
+      card.appendChild(clearBtn);
+    }
+
+    appDiv.appendChild(card);
+  }
+
+  escala.forEach(criarCard);
+
+</script>
+
+</body>
+</html>
