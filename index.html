@@ -7,7 +7,8 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #eef2f7;
+      background: #121212;
+      color: #e0e0e0;
       margin: 0;
       padding: 20px;
     }
@@ -15,20 +16,22 @@
     h1 {
       text-align: center;
       margin-bottom: 25px;
+      color: #ffffff;
     }
 
     .card {
-      background: white;
+      background: #1e1e1e;
       border-radius: 14px;
       padding: 15px;
       margin-bottom: 20px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
 
     .title {
       font-weight: bold;
       margin-bottom: 12px;
       font-size: 17px;
+      color: #ffffff;
     }
 
     .row {
@@ -40,7 +43,7 @@
     }
 
     .label {
-      width: 90px;
+      width: 120px;
       font-weight: bold;
     }
 
@@ -48,28 +51,28 @@
       flex: 1;
       padding: 8px;
       border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 14px;
+      border: 1px solid #444;
+      background: #2a2a2a;
+      color: #fff;
     }
 
     button {
       padding: 7px 10px;
       border: none;
       border-radius: 8px;
-      background: #007bff;
+      background: #0d6efd;
       color: white;
       cursor: pointer;
     }
 
     button:disabled {
-      background: gray;
-      cursor: not-allowed;
+      background: #555;
     }
 
     .filled {
-      background: #e6f7ec;
+      background: #1f3d2b;
       border: 1px solid #28a745;
-      color: #155724;
+      color: #8fffaa;
       font-weight: bold;
     }
 
@@ -87,7 +90,7 @@
 
 <body>
 
-<h1>Escala Semana Santa</h1>
+<h1>🎬 Escala Semana Santa</h1>
 
 <div id="app"></div>
 
@@ -118,7 +121,14 @@
     { data: "03/04", dia: "Sexta", hora: "20:00" }
   ];
 
-  const funcoes = ["PA", "PC", "Corte", "Câmera 1", "Câmera 2", "Câmera 3"];
+  const funcoes = [
+    "🎚️ PA",
+    "💻 PC",
+    "✂️ Corte",
+    "🎥 Câmera 1",
+    "🎥 Câmera 2",
+    "🎥 Câmera 3"
+  ];
 
   const appDiv = document.getElementById("app");
 
@@ -165,6 +175,7 @@
         }
 
         const caminho = `${diaObj.data}_${func}`;
+
         await set(ref(db, caminho), nome);
 
         input.disabled = true;
@@ -190,7 +201,6 @@
       });
     });
 
-    // BOTÃO ADMIN (SÓ APARECE SE ?admin=1)
     if (isAdmin) {
       const clearBtn = document.createElement("button");
       clearBtn.innerText = "Limpar este dia (admin)";
