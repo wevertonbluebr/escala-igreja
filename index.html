@@ -10,13 +10,27 @@
       background: #121212;
       color: #e0e0e0;
       margin: 0;
-      padding: 20px;
+      padding: 15px;
     }
 
     h1 {
       text-align: center;
-      margin-bottom: 25px;
-      color: #ffffff;
+      margin-bottom: 10px;
+    }
+
+    .top-bar {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .toggle-btn {
+      background: #ffc107;
+      color: #000;
+      font-weight: bold;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: none;
     }
 
     .card {
@@ -30,8 +44,8 @@
     .title {
       font-weight: bold;
       margin-bottom: 12px;
-      font-size: 17px;
-      color: #ffffff;
+      font-size: 16px;
+      color: #fff;
     }
 
     .row {
@@ -56,6 +70,24 @@
       color: #fff;
     }
 
+    .filled {
+      background: #1f3d2b;
+      border: 1px solid #28a745;
+      color: #8fffaa;
+      font-weight: bold;
+    }
+
+    .visual-text {
+      flex: 1;
+      font-weight: bold;
+      color: #8fffaa;
+    }
+
+    .empty-text {
+      color: #777;
+      font-style: italic;
+    }
+
     button {
       padding: 7px 10px;
       border: none;
@@ -65,32 +97,32 @@
       cursor: pointer;
     }
 
-    button:disabled {
-      background: #555;
-    }
-
-    .filled {
-      background: #1f3d2b;
-      border: 1px solid #28a745;
-      color: #8fffaa;
-      font-weight: bold;
-    }
-
-    .error {
-      border: 2px solid red;
-    }
-
     .clear-btn {
       background: #dc3545;
       margin-top: 10px;
       width: 100%;
+    }
+
+    @media (max-width: 600px) {
+      .row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .label {
+        width: 100%;
+      }
     }
   </style>
 </head>
 
 <body>
 
-<h1>🎬 Escala Semana Santa</h1>
+<h1>🎬 Escala</h1>
+
+<div class="top-bar">
+  <button class="toggle-btn" onclick="toggleModo()">👁️ Modo Visual</button>
+</div>
 
 <div id="app"></div>
 
@@ -111,6 +143,7 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
+  let modoVisual = false;
   const isAdmin = window.location.search.includes("admin=1");
 
   const escala = [
@@ -140,6 +173,12 @@
     return Object.values(dados).some(v => v.toLowerCase() === nome.toLowerCase());
   }
 
+  function toggleModo() {
+    modoVisual = !modoVisual;
+    appDiv.innerHTML = "";
+    escala.forEach(criarCard);
+  }
+
   function criarCard(diaObj) {
     const card = document.createElement("div");
     card.className = "card";
@@ -157,61 +196,73 @@
       label.className = "label";
       label.innerText = func;
 
-      const input = document.createElement("input");
-      input.placeholder = "Disponível";
-
-      const btn = document.createElement("button");
-      btn.innerText = "Salvar";
-
-      btn.onclick = async () => {
-        const nome = input.value.trim();
-        if (!nome) return;
-
-        const duplicado = await nomeJaExiste(nome);
-        if (duplicado) {
-          input.classList.add("error");
-          alert("Esse nome já foi usado em outra função!");
-          return;
-        }
-
-        const caminho = `${diaObj.data}_${func}`;
-
-        await set(ref(db, caminho), nome);
-
-        input.disabled = true;
-        btn.disabled = true;
-        input.classList.add("filled");
-        input.classList.remove("error");
-      };
-
-      row.appendChild(label);
-      row.appendChild(input);
-      row.appendChild(btn);
-
-      card.appendChild(row);
-
       const caminho = `${diaObj.data}_${func}`;
-      get(child(ref(db), caminho)).then(snapshot => {
-        if (snapshot.exists()) {
-          input.value = snapshot.val();
+
+      if (modoVisual) {
+        const text = document.createElement("span");
+        text.className = "visual-text empty-text";
+        text.innerText = "Disponível";
+
+        get(child(ref(db), caminho)).then(snapshot => {
+          if (snapshot.exists()) {
+            text.innerText = snapshot.val();
+            text.classList.remove("empty-text");
+          }
+        });
+
+        row.appendChild(label);
+        row.appendChild(text);
+      } else {
+        const input = document.createElement("input");
+        input.placeholder = "Disponível";
+
+        const btn = document.createElement("button");
+        btn.innerText = "Salvar";
+
+        btn.onclick = async () => {
+          const nome = input.value.trim();
+          if (!nome) return;
+
+          const duplicado = await nomeJaExiste(nome);
+          if (duplicado) {
+            alert("Esse nome já foi usado!");
+            return;
+          }
+
+          await set(ref(db, caminho), nome);
+
           input.disabled = true;
           btn.disabled = true;
           input.classList.add("filled");
-        }
-      });
+        };
+
+        row.appendChild(label);
+        row.appendChild(input);
+        row.appendChild(btn);
+
+        get(child(ref(db), caminho)).then(snapshot => {
+          if (snapshot.exists()) {
+            input.value = snapshot.val();
+            input.disabled = true;
+            btn.disabled = true;
+            input.classList.add("filled");
+          }
+        });
+      }
+
+      card.appendChild(row);
     });
 
-    if (isAdmin) {
+    if (isAdmin && !modoVisual) {
       const clearBtn = document.createElement("button");
       clearBtn.innerText = "Limpar este dia (admin)";
       clearBtn.className = "clear-btn";
 
       clearBtn.onclick = async () => {
-        if (!confirm("Tem certeza que deseja limpar este dia?")) return;
+        if (!confirm("Tem certeza?")) return;
 
         for (let func of funcoes) {
-          const caminho = `${diaObj.data}_${func}`;
-          await remove(ref(db, caminho));
+          await remove(ref(db, `${diaObj.data}_${func}`));
         }
 
         location.reload();
